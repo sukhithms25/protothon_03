@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI GitHub Auto-Fixer UI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-brand" style="cursor:pointer;" id="nav-home">
+            <i class="fa-brands fa-github text-gradient"></i>
+            <span id="nav-username">AIHub</span>
+        </div>
+        <div class="nav-links" id="nav-actions" style="display:none;">
+            <button class="btn btn-secondary" id="btn-logout">Logout</button>
+        </div>
+    </header>
+
+    <!-- VIEW: AUTHENTICATION -->
+    <main id="view-auth" class="container view active-view">
+        <div class="auth-box glass-panel" style="max-width:400px; margin:60px auto; padding:32px;">
+            <h2 style="text-align:center; margin-bottom:24px;">Sign in</h2>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="auth-username" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="auth-password" required>
+            </div>
+            <button class="btn btn-primary" id="btn-login" style="width:100%; margin-bottom:12px;">Login</button>
+            <button class="btn btn-secondary" id="btn-signup" style="width:100%;">Create Account</button>
+            <p id="auth-msg" style="color:var(--danger-color); font-size:12px; margin-top:12px; text-align:center;"></p>
+        </div>
+    </main>
+
+    <!-- VIEW: DASHBOARD -->
+    <main id="view-dashboard" class="container view hidden" style="display: flex; gap: 32px; padding-top: 32px;">
+        <!-- Left Profile Sidebar -->
+        <aside class="profile-sidebar" style="width: 296px; flex-shrink: 0;">
+            <div class="profile-avatar">
+                <i class="fa-brands fa-github"></i>
+            </div>
+            <h2 id="profile-name" style="margin-top: 16px; font-size: 24px; color: var(--text-primary);">username</h2>
+            <p id="profile-login" style="font-size: 20px; color: var(--text-muted); font-weight: 300; margin-bottom: 16px;">username</p>
+            <button class="btn btn-secondary profile-edit-btn" style="width: 100%; margin-bottom: 16px;">Edit profile</button>
+            <div class="profile-stats">
+                <i class="fa-solid fa-users"></i> <span style="font-weight: 600;">0</span> followers · <span style="font-weight: 600;">0</span> following
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="dashboard-content" style="flex-grow: 1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 16px;">
+                <nav class="repo-tabs" style="margin: 0;">
+                    <button class="tab-btn active"><i class="fa-solid fa-book-bookmark"></i> Repositories <span class="badge" id="repo-count-badge" style="margin-left: 6px; background: rgba(255,255,255,0.1);">0</span></button>
+                </nav>
+                <button class="btn btn-primary" id="btn-create-repo-modal" style="display: flex; gap: 8px; align-items: center;"><i class="fa-solid fa-book-journal-whills"></i> New</button>
+            </div>
+            
+            <div class="filter-bar" style="margin-bottom: 16px;">
+                <input type="text" placeholder="Find a repository..." style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-primary); width: 100%;">
+            </div>
+
+            <div id="repo-list" class="repo-list-container">
+                <div class="loading">Loading repositories...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- VIEW: REPOSITORY -->
+    <div id="view-repo" class="view hidden">
+        <div class="repo-header">
+            <div class="container">
+                <div class="repo-title">
+                    <i class="fa-brands fa-github avatar" style="font-size:32px;"></i>
+                    <h1 id="repo-full-name">Owner / Repo</h1>
+                    <span class="badge public">Public</span>
+                </div>
+                <p id="repo-description" class="repo-desc">...</p>
+                <nav class="repo-tabs">
+                    <button class="tab-btn active" data-target="code-tab"><i class="fa-solid fa-code"></i> Code</button>
+                    <button class="tab-btn" data-target="issues-tab"><i class="fa-regular fa-circle-dot"></i> Issues</button>
+                    <button class="tab-btn" data-target="prs-tab"><i class="fa-solid fa-code-pull-request"></i> Pull Requests</button>
+                </nav>
+            </div>
+        </div>
+
+        <main class="container" style="padding-top:24px;">
+            <!-- CODE TAB -->
+            <section id="code-tab" class="tab-content active">
+                <div class="file-explorer glass-panel">
+                    <div class="file-list-header"><span>Name</span></div>
+                    <div id="file-list" class="file-list"></div>
+                </div>
+            </section>
+
+            <!-- ISSUES TAB -->
+            <section id="issues-tab" class="tab-content">
+                <div class="tab-header-actions">
+                    <div></div>
+                    <button class="btn btn-primary" id="btn-new-issue">New issue</button>
+                </div>
+                <div class="list-container glass-panel">
+                    <div class="list-header"><span><i class="fa-regular fa-circle-dot"></i> Open issues</span></div>
+                    <div id="issue-list" class="list-body"></div>
+                </div>
+            </section>
+
+            <!-- PRS TAB -->
+            <section id="prs-tab" class="tab-content">
+                <div class="list-container glass-panel">
+                    <div class="list-header"><span><i class="fa-solid fa-code-pull-request"></i> Pull requests generated by AI</span></div>
+                    <div id="pr-list" class="list-body"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL: NEW REPO -->
+    <div id="new-repo-modal" class="modal-overlay hidden">
+        <div class="modal glass-panel">
+            <div class="modal-header">
+                <h2>Create Repository</h2>
+                <button class="close-btn" onclick="document.getElementById('new-repo-modal').classList.add('hidden')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Repository Name</label>
+                    <input type="text" id="repo-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Description (Optional)</label>
+                    <input type="text" id="repo-desc-input">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" id="btn-create-repo">Create Repository</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: RAISE ISSUE -->
+    <div id="issue-modal" class="modal-overlay hidden">
+        <div class="modal glass-panel">
+            <div class="modal-header">
+                <h2>Raise Issue & Auto-Fix</h2>
+                <button class="close-btn" onclick="document.getElementById('issue-modal').classList.add('hidden')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Add a title</label>
+                    <input type="text" id="issue-title" placeholder="Title" required>
+                </div>
+                <div class="form-group">
+                    <label>Add a description</label>
+                    <textarea id="issue-body" rows="6" placeholder="Describe the bug or feature clearly so the AI knows what to fix..." required></textarea>
+                </div>
+                
+                <div id="ai-status" class="ai-status hidden">
+                    <div class="spinner-glow"></div>
+                    <div class="status-texts">
+                        <p class="status-step active" id="step-github"><i class="fa-brands fa-github"></i> Creating Issue...</p>
+                        <p class="status-step" id="step-reading"><i class="fa-solid fa-robot"></i> AI is reading issue requirements...</p>
+                        <p class="status-step" id="step-finding"><i class="fa-solid fa-magnifying-glass"></i> Locating relevant files in DB...</p>
+                        <p class="status-step" id="step-coding"><i class="fa-solid fa-laptop-code"></i> AI is writing the code fix...</p>
+                        <p class="status-step" id="step-pr"><i class="fa-solid fa-code-pull-request"></i> Committing Pull Request...</p>
+                    </div>
+                </div>
+
+                <div class="modal-actions" id="modal-actions">
+                    <button class="btn btn-primary btn-glow" id="btn-submit-issue"><i class="fa-solid fa-wand-magic-sparkles"></i> Create & Auto-Fix</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
