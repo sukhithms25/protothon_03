@@ -10,65 +10,125 @@
 </head>
 <body>
     <header class="navbar">
-        <div class="nav-brand" style="cursor:pointer;" id="nav-home">
-            <i class="fa-brands fa-github text-gradient"></i>
-            <span id="nav-username">AIHub</span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="btn-icon" style="background:transparent; border:none; color:white; font-size:18px;"><i class="fa-solid fa-bars"></i></button>
+            <div class="nav-brand" style="cursor:pointer; gap: 8px;" id="nav-home">
+                <i class="fa-brands fa-github"></i>
+                <span class="nav-title">Dashboard</span>
+            </div>
         </div>
-        <div class="nav-links" id="nav-actions" style="display:none;">
-            <button class="btn btn-secondary" id="btn-logout">Logout</button>
+        
+        <div class="nav-center-search">
+            <div class="search-input-mock">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" placeholder="Type / to search" disabled>
+                <div class="search-kbd">/</div>
+            </div>
+        </div>
+
+        <div class="nav-right" id="nav-actions" style="display:none;">
+            <div class="nav-icon-set">
+                <div class="nav-icon-item"><i class="fa-solid fa-plus"></i> <i class="fa-solid fa-caret-down" style="font-size:10px;"></i></div>
+                <div class="nav-icon-item"><i class="fa-regular fa-circle-dot"></i></div>
+                <div class="nav-icon-item"><i class="fa-solid fa-code-pull-request"></i></div>
+                <div class="nav-icon-item"><i class="fa-solid fa-inbox"></i></div>
+            </div>
+            <div class="nav-profile-group">
+                <img id="nav-avatar" src="https://github.com/identicons/user.png" class="avatar-sm">
+            </div>
         </div>
     </header>
 
     <!-- VIEW: AUTHENTICATION -->
     <main id="view-auth" class="container view active-view">
-        <div class="auth-box glass-panel" style="max-width:400px; margin:60px auto; padding:32px;">
-            <h2 style="text-align:center; margin-bottom:24px;">Sign in</h2>
+        <div class="auth-box glass-panel" style="max-width:400px; margin:60px auto; padding:32px; border-radius: 12px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <i class="fa-brands fa-github" style="font-size: 48px; margin-bottom: 16px;"></i>
+                <h2 style="font-weight: 400;">Sign in to GitHub Clone</h2>
+            </div>
             <div class="form-group">
-                <label>Username</label>
+                <label>Username or email address</label>
                 <input type="text" id="auth-username" required>
             </div>
             <div class="form-group">
                 <label>Password</label>
                 <input type="password" id="auth-password" required>
             </div>
-            <button class="btn btn-primary" id="btn-login" style="width:100%; margin-bottom:12px;">Login</button>
-            <button class="btn btn-secondary" id="btn-signup" style="width:100%;">Create Account</button>
+            <button class="btn btn-primary btn-block" id="btn-login" style="margin-bottom:12px; width:100%;">Sign in</button>
+            <button class="btn btn-secondary btn-block" id="btn-signup" style="width:100%;">Create an account</button>
             <p id="auth-msg" style="color:var(--danger-color); font-size:12px; margin-top:12px; text-align:center;"></p>
         </div>
     </main>
 
     <!-- VIEW: DASHBOARD -->
-    <main id="view-dashboard" class="container view hidden" style="display: flex; gap: 32px; padding-top: 32px;">
-        <!-- Left Profile Sidebar -->
-        <aside class="profile-sidebar" style="width: 296px; flex-shrink: 0;">
-            <div class="profile-avatar">
-                <i class="fa-brands fa-github"></i>
-            </div>
-            <h2 id="profile-name" style="margin-top: 16px; font-size: 24px; color: var(--text-primary);">username</h2>
-            <p id="profile-login" style="font-size: 20px; color: var(--text-muted); font-weight: 300; margin-bottom: 16px;">username</p>
-            <button class="btn btn-secondary profile-edit-btn" style="width: 100%; margin-bottom: 16px;">Edit profile</button>
-            <div class="profile-stats">
-                <i class="fa-solid fa-users"></i> <span style="font-weight: 600;">0</span> followers · <span style="font-weight: 600;">0</span> following
+    <main id="view-dashboard" class="dashboard-view view hidden">
+        <!-- Left Sidebar: Repositories -->
+        <aside class="dash-left">
+            <div class="sidebar-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                    <h3 class="sidebar-title">Top repositories</h3>
+                    <button class="btn btn-success btn-sm" id="btn-create-repo-modal-dash" style="padding: 4px 12px; font-size: 13px; font-weight: 500;"><i class="fa-solid fa-book-bookmark"></i> New</button>
+                </div>
+                <div class="sidebar-search-box">
+                    <input type="text" placeholder="Find a repository..." class="sidebar-input">
+                </div>
+                <div id="repo-list-sidebar" class="sidebar-repo-list">
+                    <!-- Loaded via JS -->
+                </div>
+                <a href="#" class="view-more-link">Show more</a>
             </div>
         </aside>
 
-        <!-- Main Content Area -->
-        <div class="dashboard-content" style="flex-grow: 1;">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 16px;">
-                <nav class="repo-tabs" style="margin: 0;">
-                    <button class="tab-btn active"><i class="fa-solid fa-book-bookmark"></i> Repositories <span class="badge" id="repo-count-badge" style="margin-left: 6px; background: rgba(255,255,255,0.1);">0</span></button>
-                </nav>
-                <button class="btn btn-primary" id="btn-create-repo-modal" style="display: flex; gap: 8px; align-items: center;"><i class="fa-solid fa-book-journal-whills"></i> New</button>
+        <!-- Center Feed -->
+        <div class="dash-center">
+            <h1 class="page-title">Home</h1>
+            
+            <!-- Ask Anything Box -->
+            <div class="ask-container">
+                <div class="ask-box">
+                    <textarea placeholder="Ask anything" rows="1"></textarea>
+                    <div class="ask-footer">
+                        <div class="ask-toolbar">
+                            <div class="ask-tool-btn"><i class="fa-solid fa-terminal"></i> Ask <i class="fa-solid fa-caret-down"></i></div>
+                            <div class="ask-tool-btn"><i class="fa-solid fa-book"></i> All repositories <i class="fa-solid fa-caret-down"></i></div>
+                            <div class="ask-tool-btn"><i class="fa-solid fa-plus"></i></div>
+                            <div class="ask-divider"></div>
+                            <div class="ask-action-btn"><i class="fa-solid fa-robot"></i> Agent</div>
+                            <div class="ask-action-btn"><i class="fa-solid fa-circle-dot"></i> Create issue</div>
+                            <div class="ask-action-btn"><i class="fa-solid fa-code"></i> Write code</div>
+                            <div class="ask-action-btn"><i class="fa-solid fa-code-branch"></i> Git <i class="fa-solid fa-caret-down"></i></div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span class="ai-model-tag">Gemini Flash 2.0</span>
+                            <button class="ask-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
             </div>
             
-            <div class="filter-bar" style="margin-bottom: 16px;">
-                <input type="text" placeholder="Find a repository..." style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-primary); width: 100%;">
+            <div class="feed-header">
+                <h3 class="feed-title">Feed</h3>
+                <button class="btn-filter"><i class="fa-solid fa-sliders"></i> Filter</button>
             </div>
-
-            <div id="repo-list" class="repo-list-container">
-                <div class="loading">Loading repositories...</div>
+            
+            <div id="activity-feed" class="feed-container">
+                <!-- Activity is populated here -->
             </div>
         </div>
+
+        <!-- Right Sidebar: Explore -->
+        <aside class="dash-right">
+            <div class="changelog-box">
+                <h3 class="sidebar-title">Latest from our changelog</h3>
+                <ul class="changelog-list">
+                    <li><span class="blue-dot"></span> <div class="changelog-item"><span class="time">9 hours ago</span><p>Optionally skip approval for AI agent Actions...</p></div></li>
+                    <li><span class="blue-dot"></span> <div class="changelog-item"><span class="time">11 hours ago</span><p>Self-hosted runner minimum version enforcement paused</p></div></li>
+                    <li><span class="blue-dot"></span> <div class="changelog-item"><span class="time">13 hours ago</span><p>Updates to GitHub Copilot for students</p></div></li>
+                    <li><span class="gray-dot"></span> <div class="changelog-item"><span class="time">Yesterday</span><p>REST API version 2026-03-10 is now available</p></div></li>
+                </ul>
+                <a href="#" class="view-more-link">View changelog →</a>
+            </div>
+        </aside>
     </main>
 
     <!-- VIEW: REPOSITORY -->

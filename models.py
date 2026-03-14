@@ -57,12 +57,21 @@ class PullRequest(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     repo_id = Column(Integer, ForeignKey("repositories.id"), index=True)
+    issue_id = Column(Integer, ForeignKey("issues.id"), nullable=True)
     title = Column(String, index=True)
     body = Column(Text)
     state = Column(String, default="open") # open, merged, closed
     branch_name = Column(String)
+    
+    # New fields for PR review and merge logic
+    target_path = Column(String)
+    original_code = Column(Text)
+    proposed_code = Column(Text)
+    ai_review = Column(Text, nullable=True)
+    
     author_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     repo = relationship("Repository", back_populates="prs")
     author = relationship("User", back_populates="prs")
+    issue = relationship("Issue")

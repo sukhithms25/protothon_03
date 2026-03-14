@@ -150,7 +150,10 @@ def get_prs(owner: str, repo_name: str, db: Session = Depends(get_db)):
         "title": pr.title,
         "state": pr.state,
         "author": pr.author.username,
-        "branch": pr.branch_name
+        "branch": pr.branch_name,
+        "proposed_code": pr.proposed_code,
+        "target_path": pr.target_path,
+        "ai_review": pr.ai_review
     } for pr in prs]
 
 @router.post("/api/repos/{owner}/{repo_name}/generate-pr")
@@ -158,16 +161,28 @@ def generate_ai_pr(owner: str, repo_name: str, issue: IssueCreate, db: Session =
     """Trigger the AI to fix a given issue and create a PR natively."""
     repo = get_repo_details(owner, repo_name, db)
     
+    # First create the issue record so we have an ID
+    new_issue = db_service.create_issue(db, repo["id"], issue.title, issue.body, current_user.id)
+    
     try:
         result = process_issue(
             db=db,
             repo_id=repo["id"],
             issue_title=issue.title,
             issue_body=issue.body,
-            author_id=current_user.id
+            author_id=current_user.id,
+            issue_number=new_issue.id
         )
-        return {"status": "success", "data": result}
+        return {"status": "success", "data": result, "issue_id": new_issue.id}
     except Exception as e:
         import traceback
         traceback.print_exc()
         return {"status": "error", "message": str(e)}
+
+@router.post("/api/repos/{owner}/{repo_name}/prs/{pr_id}/merge")
+def merge_pull_request(owner: str, repo_name: str, pr_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Verify repo belongs to owner if necessary, for now we just merge by ID
+    merged_pr = db_service.merge_pr(db, pr_id)
+    if not merged_pr:
+        raise HTTPException(status_code=400, detail="PR not found or already merged")
+    return {"status": "success", "message": "Pull Request merged successfully"}

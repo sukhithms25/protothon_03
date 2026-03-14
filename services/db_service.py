@@ -52,15 +52,44 @@ def create_issue(db: Session, repo_id: int, title: str, body: str, author_id: in
 def get_repo_prs(db: Session, repo_id: int):
     return db.query(models.PullRequest).filter(models.PullRequest.repo_id == repo_id).all()
 
-def create_pull_request(db: Session, repo_id: int, title: str, body: str, branch_name: str, author_id: int):
+def create_pull_request(db: Session, repo_id: int, title: str, body: str, branch_name: str, author_id: int, 
+                        target_path: str = None, original_code: str = None, proposed_code: str = None, ai_review: str = None, issue_id: int = None):
     db_pr = models.PullRequest(
         repo_id=repo_id,
+        issue_id=issue_id,
         title=title,
         body=body,
         branch_name=branch_name,
-        author_id=author_id
+        author_id=author_id,
+        target_path=target_path,
+        original_code=original_code,
+        proposed_code=proposed_code,
+        ai_review=ai_review
     )
     db.add(db_pr)
     db.commit()
     db.refresh(db_pr)
     return db_pr
+
+def merge_pr(db: Session, pr_id: int):
+    pr = db.query(models.PullRequest).filter(models.PullRequest.id == pr_id).first()
+    if not pr or pr.state != "open":
+        return None
+    
+    # 1. Update the actual file
+    file = db.query(models.File).filter(models.File.repo_id == pr.repo_id, models.File.path == pr.target_path).first()
+    if file:
+        file.content = pr.proposed_code
+    
+    # 2. Update PR state
+    pr.state = "merged"
+    
+    # 3. Close the linked issue if exists
+    if pr.issue_id:
+        issue = db.query(models.Issue).filter(models.Issue.id == pr.issue_id).first()
+        if issue:
+            issue.status = "closed"
+            
+    db.commit()
+    db.refresh(pr)
+    return pr

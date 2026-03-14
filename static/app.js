@@ -86,60 +86,85 @@ document.addEventListener("DOMContentLoaded", () => {
             const meRes = await fetch("/api/me", { headers: { "Authorization": `Bearer ${token}` } });
             if (!meRes.ok) throw new Error("Not authenticated");
             currentUser = await meRes.json();
-            navUsername.textContent = currentUser.username;
-            navActions.style.display = "block";
-
-            // Populate Sidebar Profile
-            document.getElementById("profile-name").textContent = currentUser.username;
-            document.getElementById("profile-login").textContent = currentUser.username;
+            
+            // Update Navbar Profile
+            document.getElementById("nav-avatar").src = `https://github.com/identicons/${currentUser.username}.png`;
+            navActions.style.display = "flex";
 
             const repoRes = await fetch("/api/repos", { headers: { "Authorization": `Bearer ${token}` } });
             const repos = await repoRes.json();
             
-            document.getElementById("repo-count-badge").textContent = repos.length;
+            // Populate Sidebar Repos
+            const renderSidebarRepos = (filter = "") => {
+                const sidebarList = document.getElementById("repo-list-sidebar");
+                sidebarList.innerHTML = "";
+                const filtered = repos.filter(r => r.name.toLowerCase().includes(filter.toLowerCase()));
+                filtered.forEach(repo => {
+                    const item = document.createElement("a");
+                    item.href = "#";
+                    item.className = "sidebar-repo-item";
+                    item.innerHTML = `<i class="fa-solid fa-book-bookmark"></i> ${repo.owner}/${repo.name}`;
+                    item.addEventListener("click", (e) => {
+                        e.preventDefault();
+                        loadRepoView(repo.owner, repo.name);
+                    });
+                    sidebarList.appendChild(item);
+                });
+                if (filtered.length === 0) sidebarList.innerHTML = `<div style="font-size:12px; color:var(--text-muted); padding:8px 0;">No repositories found.</div>`;
+            };
             
-            const list = document.getElementById("repo-list");
-            list.innerHTML = "";
-            repos.forEach(repo => {
-                const card = document.createElement("div");
-                card.className = "repo-list-item";
-                card.innerHTML = `
-                    <div style="flex-grow: 1;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                            <h3 style="color: var(--accent-color); font-size: 20px; font-weight: 600; cursor: pointer;">${repo.name}</h3>
-                            <span class="badge public" style="font-size: 12px; border-radius: 2em; padding: 0 7px; color: var(--text-muted); border: 1px solid var(--border-color);">${repo.visibility}</span>
-                        </div>
-                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">${repo.description || "No description provided."}</p>
-                        <div style="display: flex; gap: 16px; font-size: 12px; color: var(--text-muted); align-items: center;">
-                            <span style="display:flex; align-items:center; gap:4px;"><span style="width:12px; height:12px; border-radius:50%; background-color:#3fb950; display:inline-block;"></span>${repo.language}</span>
-                            <span><i class="fa-regular fa-star"></i> ${repo.stars}</span>
-                            <span><i class="fa-solid fa-code-fork"></i> ${repo.forks}</span>
-                            <span>Updated on ${repo.updated_at}</span>
-                        </div>
+            renderSidebarRepos();
+
+            // Sidebar Search logic
+            const sidebarSearch = document.querySelector(".sidebar-input");
+            sidebarSearch.addEventListener("input", (e) => renderSidebarRepos(e.target.value));
+
+            // Populate Feed with Mock Activity
+            const feed = document.getElementById("activity-feed");
+            feed.innerHTML = "";
+            const activities = [
+                { user: "gokul-1998", action: "added a repository to", target: "smart_life", time: "3 hours ago", repo: "smart_ways_to_spend_less", stars: 1 },
+                { user: "gokul-1998", action: "starred a repository", target: "smart_ways_to_spend_less", time: "3 hours ago", repo: "smart_ways_to_spend_less", stars: 1 }
+            ];
+
+            activities.forEach(act => {
+                const item = document.createElement("div");
+                item.className = "feed-item";
+                item.innerHTML = `
+                    <div class="feed-item-header">
+                        <img src="https://github.com/identicons/${act.user}.png" class="avatar-sm">
+                        <span><strong>${act.user}</strong> <span class="feed-action">${act.action}</span> <strong>${act.target}</strong></span>
+                        <span class="text-muted" style="font-size:12px; margin-left:auto;">${act.time}</span>
                     </div>
-                    <div>
-                        <button class="btn btn-secondary" style="display:flex; align-items:center; gap:6px; padding: 3px 12px;"><i class="fa-regular fa-star"></i> Star</button>
+                    <div class="feed-repo-card">
+                        <div>
+                            <strong style="color:var(--accent-color);">${act.user}/${act.repo}</strong>
+                            <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${act.stars} star</div>
+                        </div>
+                        <button class="feed-star-btn"><i class="fa-regular fa-star"></i> Star</button>
                     </div>
                 `;
-                card.querySelector("h3").addEventListener("click", () => loadRepoView(repo.owner, repo.name));
-                list.appendChild(card);
+                feed.appendChild(item);
             });
-            if (repos.length === 0) {
-                list.innerHTML = `
-                <div style="text-align: center; padding: 48px 0; border: 1px dashed var(--border-color); border-radius: 6px; margin-top: 16px;">
-                    <h3 style="margin-bottom: 8px;">You don't have any public repositories yet.</h3>
-                    <button class="btn btn-primary" onclick="document.getElementById('new-repo-modal').classList.remove('hidden')">Create a repository</button>
-                </div>`;
-            }
+
+            // Auto-resize for Ask Textarea
+            const askText = document.querySelector(".ask-box textarea");
+            askText.addEventListener("input", () => {
+                askText.style.height = "auto";
+                askText.style.height = (askText.scrollHeight) + "px";
+            });
+
         } catch (e) {
+            console.error(e);
             localStorage.removeItem("token");
             showView("view-auth");
         }
     }
 
-    document.getElementById("btn-create-repo-modal").addEventListener("click", () => {
-        document.getElementById("new-repo-modal").classList.remove("hidden");
-    });
+    // Modal Triggers
+    const openNewRepo = () => document.getElementById("new-repo-modal").classList.remove("hidden");
+    const dashNewBtn = document.getElementById("btn-create-repo-modal-dash");
+    if (dashNewBtn) dashNewBtn.addEventListener("click", (e) => { e.preventDefault(); openNewRepo(); });
 
     document.getElementById("btn-create-repo").addEventListener("click", async () => {
         const name = document.getElementById("repo-name").value;
@@ -213,7 +238,47 @@ document.addEventListener("DOMContentLoaded", () => {
         const list = document.getElementById("pr-list");
         list.innerHTML = "";
         prs.forEach(pr => {
-            list.innerHTML += `<div class="list-row"><div class="list-icon"><i class="fa-solid fa-code-pull-request"></i></div><div class="list-content"><h4>${pr.title}</h4><div class="list-meta">#${pr.id} opened by ${pr.author}</div></div></div>`;
+            const row = document.createElement("div");
+            row.className = "list-row";
+            row.style.flexDirection = "column";
+            row.style.alignItems = "stretch";
+            
+            let mergeBtn = pr.state === "open" ? `<button class="btn btn-primary btn-sm btn-merge" data-id="${pr.id}" style="padding:4px 12px; margin-top:8px;"><i class="fa-solid fa-code-merge"></i> Merge Pull Request</button>` : `<span class="badge" style="background:var(--secondary-color); color:white; width:fit-content; margin-top:8px;">${pr.state.toUpperCase()}</span>`;
+            
+            row.innerHTML = `
+                <div style="display:flex; gap:12px;">
+                    <div class="list-icon" style="color:#a371f7;"><i class="fa-solid fa-code-pull-request"></i></div>
+                    <div class="list-content">
+                        <h4 style="margin-bottom:4px;">${pr.title}</h4>
+                        <div class="list-meta">#${pr.id} opened by ${pr.author} • branch: ${pr.branch_name}</div>
+                        ${pr.state === "open" ? `<div class="pr-preview-box glass-panel" style="margin-top:12px; padding:12px; font-size:13px; border:1px solid rgba(255,255,255,0.05); background:rgba(0,0,0,0.2);">
+                            <div style="color:var(--text-muted); margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">AI Code Review</div>
+                            <div style="font-style:italic; margin-bottom:12px;">"${pr.ai_review || "No review available."}"</div>
+                            <div style="color:var(--text-muted); margin-bottom:4px;">Target File: <code style="color:var(--accent-color);">${pr.target_path}</code></div>
+                            ${mergeBtn}
+                        </div>` : mergeBtn}
+                    </div>
+                </div>
+            `;
+            
+            const btn = row.querySelector(".btn-merge");
+            if (btn) {
+                btn.addEventListener("click", async () => {
+                    if (!confirm("Are you sure you want to merge these AI changes? This will overwrite the source file.")) return;
+                    btn.disabled = true;
+                    btn.textContent = "Merging...";
+                    const mRes = await fetch(`/api/repos/${currentRepo.owner}/${currentRepo.name}/prs/${pr.id}/merge`, {
+                        method: "POST",
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+                    if (mRes.ok) {
+                        alert("PR Merged successfully!");
+                        fetchPRs(); fetchFiles(); fetchIssues();
+                    } else alert("Merge failed.");
+                });
+            }
+            
+            list.appendChild(row);
         });
         if (!prs.length) list.innerHTML = `<div class="loading">No PRs yet.</div>`;
     }

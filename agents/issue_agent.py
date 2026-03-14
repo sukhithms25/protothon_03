@@ -33,9 +33,12 @@ def process_issue(db, repo_id, issue_title, issue_body, author_id, issue_number=
         db=db,
         repo_id=repo_id,
         issue_title=issue_title,
+        original_code=fix_result["original_code"],
         new_code=fix_result["new_code"],
         file_path=fix_result["file_path"],
-        author_id=author_id
+        author_id=author_id,
+        review_text=review,
+        issue_id=issue_number
     )
 
     return {
