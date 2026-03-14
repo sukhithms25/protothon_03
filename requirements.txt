@@ -1,0 +1,7 @@
+langchain
+langchain-community
+ollama
+faiss-cpu
+tree-sitter
+GitPython
+tqdm
