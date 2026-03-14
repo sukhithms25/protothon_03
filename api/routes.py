@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
+from typing import Optional
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from database import get_db
@@ -18,10 +19,20 @@ from agents.issue_agent import process_issue
 
 router = APIRouter()
 
+@router.get("/api/health")
+def health():
+    return {"status": "ok"}
+
 # --- Pydantic Models ---
 class UserCreate(BaseModel):
     username: str
     password: str
+
+class UserRead(BaseModel):
+    id: int
+    username: str
+    class Config:
+        from_attributes = True
 
 class RepoCreate(BaseModel):
     name: str
@@ -34,35 +45,54 @@ class IssueCreate(BaseModel):
 # --- Auth Routes ---
 @router.post("/api/auth/signup")
 def signup(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.username == user.username).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
-    
-    hashed_password = get_password_hash(user.password)
-    new_user = models.User(username=user.username, hashed_password=hashed_password)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return {"message": "User created successfully"}
+    try:
+        print(f"DEBUG: Signup request for {user.username}")
+        db_user = db.query(models.User).filter(models.User.username == user.username).first()
+        if db_user:
+            print(f"DEBUG: Signup failed - user exists: {user.username}")
+            raise HTTPException(status_code=400, detail="Username already registered")
+        
+        hashed_password = get_password_hash(user.password)
+        new_user = models.User(username=user.username, hashed_password=hashed_password)
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        print(f"DEBUG: Signup success for {user.username}")
+        return {"message": "User created successfully"}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"DEBUG: Signup EXCEPTION: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/api/auth/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.username == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+    try:
+        print(f"DEBUG: Login request for {form_data.username}")
+        user = db.query(models.User).filter(models.User.username == form_data.username).first()
+        if not user or not verify_password(form_data.password, user.hashed_password):
+            print(f"DEBUG: Login failed - invalid credentials: {form_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.username}, expires_delta=access_token_expires
         )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+        print(f"DEBUG: Login success for {form_data.username}")
+        return {"access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"DEBUG: Login EXCEPTION: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/api/me")
+@router.get("/api/me", response_model=UserRead)
 def read_users_me(current_user: models.User = Depends(get_current_user)):
-    return {"username": current_user.username, "id": current_user.id}
+    print(f"DEBUG: Serving /api/me for {current_user.username}")
+    return current_user
 
 # --- Repo Routes ---
 @router.get("/api/repos")
@@ -153,7 +183,8 @@ def get_prs(owner: str, repo_name: str, db: Session = Depends(get_db)):
         "branch": pr.branch_name,
         "proposed_code": pr.proposed_code,
         "target_path": pr.target_path,
-        "ai_review": pr.ai_review
+        "ai_review": pr.ai_review,
+        "description": pr.description
     } for pr in prs]
 
 @router.post("/api/repos/{owner}/{repo_name}/generate-pr")
@@ -178,6 +209,16 @@ def generate_ai_pr(owner: str, repo_name: str, issue: IssueCreate, db: Session =
         import traceback
         traceback.print_exc()
         return {"status": "error", "message": str(e)}
+
+class AiChatRequest(BaseModel):
+    prompt: str
+    image: Optional[str] = None
+
+@router.post("/api/ai/chat")
+def ai_chat(request: AiChatRequest, current_user: models.User = Depends(get_current_user)):
+    from services.llm_service import ask_llm
+    response = ask_llm(request.prompt, request.image)
+    return {"response": response}
 
 @router.post("/api/repos/{owner}/{repo_name}/prs/{pr_id}/merge")
 def merge_pull_request(owner: str, repo_name: str, pr_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

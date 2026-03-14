@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <header class="navbar">
+    <header class="navbar" id="main-navbar">
         <div style="display: flex; align-items: center; gap: 12px;">
             <button class="btn-icon" style="background:transparent; border:none; color:white; font-size:18px;"><i class="fa-solid fa-bars"></i></button>
             <div class="nav-brand" style="cursor:pointer; gap: 8px;" id="nav-home">
@@ -39,24 +39,26 @@
         </div>
     </header>
 
-    <!-- VIEW: AUTHENTICATION -->
-    <main id="view-auth" class="container view active-view">
-        <div class="auth-box glass-panel" style="max-width:400px; margin:60px auto; padding:32px; border-radius: 12px;">
-            <div style="text-align: center; margin-bottom: 24px;">
-                <i class="fa-brands fa-github" style="font-size: 48px; margin-bottom: 16px;"></i>
-                <h2 style="font-weight: 400;">Sign in to GitHub Clone</h2>
+    <!-- VIEW: AUTHENTICATION (Consolidated based on screenshot) -->
+    <main id="view-auth" class="auth-wrapper view active-view">
+        <div class="auth-container">
+            <div class="auth-header">
+                <i class="fa-brands fa-github"></i>
+                <h1>Sign in to GitHub Clone</h1>
             </div>
-            <div class="form-group">
-                <label>Username or email address</label>
-                <input type="text" id="auth-username" required>
+            <div class="auth-card">
+                <div class="form-group">
+                    <label>Username or email address</label>
+                    <input type="text" id="auth-username" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="auth-password" autocomplete="current-password">
+                </div>
+                <button class="btn btn-success btn-block" id="btn-login-submit" style="background-color: #238636; border-color: rgba(240,246,252,0.1); font-weight: 500;">Sign in</button>
+                <button class="btn btn-secondary btn-block" id="btn-signup-submit" style="background-color: #21262d; border-color: rgba(240,246,252,0.1); font-weight: 500; margin-top: 12px;">Create an account</button>
+                <p id="auth-msg" class="auth-msg-box hidden"></p>
             </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="auth-password" required>
-            </div>
-            <button class="btn btn-primary btn-block" id="btn-login" style="margin-bottom:12px; width:100%;">Sign in</button>
-            <button class="btn btn-secondary btn-block" id="btn-signup" style="width:100%;">Create an account</button>
-            <p id="auth-msg" style="color:var(--danger-color); font-size:12px; margin-top:12px; text-align:center;"></p>
         </div>
     </main>
 
@@ -86,23 +88,31 @@
             <!-- Ask Anything Box -->
             <div class="ask-container">
                 <div class="ask-box">
-                    <textarea placeholder="Ask anything" rows="1"></textarea>
+                    <div id="ask-image-preview" class="image-preview-area hidden"></div>
+                    <textarea id="ask-input" placeholder="Ask anything" rows="1"></textarea>
+                    <input type="file" id="ask-image-input" accept="image/*" hidden>
+                    
                     <div class="ask-footer">
                         <div class="ask-toolbar">
-                            <div class="ask-tool-btn"><i class="fa-solid fa-terminal"></i> Ask <i class="fa-solid fa-caret-down"></i></div>
+                            <div class="ask-tool-btn" id="btn-upload-image"><i class="fa-solid fa-paperclip"></i> Image</div>
                             <div class="ask-tool-btn"><i class="fa-solid fa-book"></i> All repositories <i class="fa-solid fa-caret-down"></i></div>
-                            <div class="ask-tool-btn"><i class="fa-solid fa-plus"></i></div>
                             <div class="ask-divider"></div>
-                            <div class="ask-action-btn"><i class="fa-solid fa-robot"></i> Agent</div>
+                            <div class="ask-action-btn" id="ask-agent-btn"><i class="fa-solid fa-robot"></i> Agent</div>
                             <div class="ask-action-btn"><i class="fa-solid fa-circle-dot"></i> Create issue</div>
                             <div class="ask-action-btn"><i class="fa-solid fa-code"></i> Write code</div>
-                            <div class="ask-action-btn"><i class="fa-solid fa-code-branch"></i> Git <i class="fa-solid fa-caret-down"></i></div>
                         </div>
                         <div style="display:flex; align-items:center; gap:12px;">
-                            <span class="ai-model-tag">Gemini Flash 2.0</span>
-                            <button class="ask-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                            <span class="ai-model-tag">Gemini 2.0 Flash</span>
+                            <button class="ask-send-btn" id="btn-ask-send"><i class="fa-solid fa-paper-plane"></i></button>
                         </div>
                     </div>
+                </div>
+                <div id="ask-result-container" class="ask-result-panel hidden glass-panel">
+                    <div class="result-header">
+                        <span><i class="fa-solid fa-sparkles"></i> AI Response</span>
+                        <button class="close-btn-sm" id="btn-close-ask-result"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div id="ask-result-content" class="result-body"></div>
                 </div>
             </div>
             
@@ -238,6 +248,6 @@
         </div>
     </div>
 
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=2"></script>
 </body>
 </html>

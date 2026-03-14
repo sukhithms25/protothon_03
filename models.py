@@ -68,6 +68,7 @@ class PullRequest(Base):
     original_code = Column(Text)
     proposed_code = Column(Text)
     ai_review = Column(Text, nullable=True)
+    description = Column(Text, nullable=True)
     
     author_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

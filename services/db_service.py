@@ -52,24 +52,24 @@ def create_issue(db: Session, repo_id: int, title: str, body: str, author_id: in
 def get_repo_prs(db: Session, repo_id: int):
     return db.query(models.PullRequest).filter(models.PullRequest.repo_id == repo_id).all()
 
-def create_pull_request(db: Session, repo_id: int, title: str, body: str, branch_name: str, author_id: int, 
-                        target_path: str = None, original_code: str = None, proposed_code: str = None, ai_review: str = None, issue_id: int = None):
-    db_pr = models.PullRequest(
+def create_pull_request(db: Session, repo_id, title, body, author_id, branch_name="main", issue_id=None, target_path=None, original_code=None, proposed_code=None, ai_review=None, description=None):
+    new_pr = models.PullRequest(
         repo_id=repo_id,
         issue_id=issue_id,
         title=title,
         body=body,
-        branch_name=branch_name,
         author_id=author_id,
+        branch_name=branch_name,
         target_path=target_path,
         original_code=original_code,
         proposed_code=proposed_code,
-        ai_review=ai_review
+        ai_review=ai_review,
+        description=description
     )
-    db.add(db_pr)
+    db.add(new_pr)
     db.commit()
-    db.refresh(db_pr)
-    return db_pr
+    db.refresh(new_pr)
+    return new_pr
 
 def merge_pr(db: Session, pr_id: int):
     pr = db.query(models.PullRequest).filter(models.PullRequest.id == pr_id).first()

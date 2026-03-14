@@ -1,7 +1,7 @@
 import time
 from services.db_service import create_pull_request, update_file_content
 
-def create_pr(db, repo_id, issue_title, original_code, new_code, file_path, author_id, review_text, issue_id=None):
+def create_pr(db, repo_id, issue_title, original_code, new_code, file_path, author_id, review_text, issue_id=None, description=None):
     """Save AI fix proposal into a PR record (does NOT overwrite source files)."""
     
     branch_name = f"ai-fix-{int(time.time())}"
@@ -18,7 +18,8 @@ def create_pr(db, repo_id, issue_title, original_code, new_code, file_path, auth
         target_path=file_path,
         original_code=original_code,
         proposed_code=new_code,
-        ai_review=review_text
+        ai_review=review_text,
+        description=description
     )
     
     return f"/repo/{repo_id}/pulls/{pr.id}"

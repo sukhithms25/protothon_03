@@ -1,10 +1,15 @@
 document.addEventListener("DOMContentLoaded", () => {
+    console.log("App Initialization Started");
+    window.onerror = function(msg, url, line) {
+        console.error("GLOBAL ERROR: ", msg, " at ", url, ":", line);
+    };
     // Auth elements
     const authView = document.getElementById("view-auth");
     const dashboardView = document.getElementById("view-dashboard");
     const repoView = document.getElementById("view-repo");
-    const navUsername = document.getElementById("nav-username");
     const navActions = document.getElementById("nav-actions");
+
+    // Unified Auth inputs
     const authUsernameInput = document.getElementById("auth-username");
     const authPasswordInput = document.getElementById("auth-password");
     const authMsg = document.getElementById("auth-msg");
@@ -21,6 +26,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const target = document.getElementById(viewId);
         target.classList.remove("hidden");
         target.classList.add("active-view");
+
+        // Toggle Navbar visibility (Navbar stays visible on auth now per screenshot)
+        const navbar = document.getElementById("main-navbar");
+        navbar.classList.remove("hidden");
     }
 
     document.getElementById("nav-home").addEventListener("click", () => {
@@ -31,15 +40,71 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btn-logout").addEventListener("click", () => {
         localStorage.removeItem("token");
         currentUser = null;
-        navActions.style.display = "none";
-        navUsername.textContent = "AIHub";
+        if (navActions) navActions.style.display = "none";
         showView("view-auth");
     });
 
-    // --- Authentication --- //
-    document.getElementById("btn-login").addEventListener("click", async () => {
+    // --- Authentication Actions --- //
+    document.getElementById("btn-signup-submit").addEventListener("click", async () => {
         const username = authUsernameInput.value;
         const password = authPasswordInput.value;
+        console.log("Signup Clicked: ", username);
+        
+        authMsg.classList.add("hidden");
+        if (!username || !password) {
+            authMsg.textContent = "Username and password are required";
+            authMsg.classList.remove("hidden");
+            return;
+        }
+        
+        const btn = document.getElementById("btn-signup-submit");
+        btn.classList.add("btn-loading");
+        btn.disabled = true;
+
+        try {
+            const res = await fetch("/api/auth/signup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || "Signup failed");
+            }
+            
+            // Auto Login After Signup
+            const formData = new URLSearchParams();
+            formData.append('username', username);
+            formData.append('password', password);
+            const loginRes = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: formData
+            });
+            if (!loginRes.ok) throw new Error("Account created, but auto-login failed. Please sign in.");
+            
+            const loginData = await loginRes.json();
+            localStorage.setItem("token", loginData.access_token);
+            loadDashboard();
+        } catch (e) {
+            authMsg.textContent = e.message;
+            authMsg.classList.remove("hidden");
+        } finally {
+            btn.classList.remove("btn-loading");
+            btn.disabled = false;
+        }
+    });
+
+    document.getElementById("btn-login-submit").addEventListener("click", async () => {
+        const username = authUsernameInput.value;
+        const password = authPasswordInput.value;
+        console.log("Login Clicked: ", username);
+        
+        authMsg.classList.add("hidden");
+        const btn = document.getElementById("btn-login-submit");
+        btn.classList.add("btn-loading");
+        btn.disabled = true;
+        
         try {
             const formData = new URLSearchParams();
             formData.append('username', username);
@@ -49,38 +114,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: formData
             });
-            if (!res.ok) throw new Error("Invalid credentials");
+            if (!res.ok) throw new Error("Incorrect username or password.");
             const data = await res.json();
             localStorage.setItem("token", data.access_token);
-            authUsernameInput.value = "";
-            authPasswordInput.value = "";
             loadDashboard();
         } catch (e) {
             authMsg.textContent = e.message;
+            authMsg.classList.remove("hidden");
+        } finally {
+            btn.classList.remove("btn-loading");
+            btn.disabled = false;
         }
     });
 
-    document.getElementById("btn-signup").addEventListener("click", async () => {
-        const username = authUsernameInput.value;
-        const password = authPasswordInput.value;
-        try {
-            const res = await fetch("/api/auth/signup", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password })
-            });
-            if (!res.ok) throw new Error("Username already taken");
-            authMsg.style.color = "var(--primary-color)";
-            authMsg.textContent = "Account created! You can now log in.";
-        } catch (e) {
-            authMsg.style.color = "var(--danger-color)";
-            authMsg.textContent = e.message;
-        }
-    });
-
-    // --- Dashboard --- //
     async function loadDashboard() {
         showView("view-dashboard");
+        // Hide auth inputs color overrides if any
+        authMsg.classList.add("hidden");
         try {
             const token = localStorage.getItem("token");
             const meRes = await fetch("/api/me", { headers: { "Authorization": `Bearer ${token}` } });
@@ -89,7 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Update Navbar Profile
             document.getElementById("nav-avatar").src = `https://github.com/identicons/${currentUser.username}.png`;
-            navActions.style.display = "flex";
+            if (navActions) navActions.style.display = "flex";
 
             const repoRes = await fetch("/api/repos", { headers: { "Authorization": `Bearer ${token}` } });
             const repos = await repoRes.json();
@@ -148,10 +198,91 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             // Auto-resize for Ask Textarea
-            const askText = document.querySelector(".ask-box textarea");
+            const askText = document.getElementById("ask-input");
+            const askBtn = document.getElementById("btn-ask-send");
+            const imgInput = document.getElementById("ask-image-input");
+            const imgPreview = document.getElementById("ask-image-preview");
+            const resultPanel = document.getElementById("ask-result-container");
+            const resultContent = document.getElementById("ask-result-content");
+
             askText.addEventListener("input", () => {
                 askText.style.height = "auto";
                 askText.style.height = (askText.scrollHeight) + "px";
+            });
+
+            // Vision / Image Upload
+            let currentImageB64 = null;
+            document.getElementById("btn-upload-image").addEventListener("click", () => imgInput.click());
+
+            imgInput.addEventListener("change", (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (re) => {
+                    currentImageB64 = re.target.result.split(",")[1];
+                    imgPreview.innerHTML = `
+                        <div class="preview-item">
+                            <img src="${re.target.result}">
+                            <button class="remove-img-btn"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    `;
+                    imgPreview.classList.remove("hidden");
+                    imgPreview.querySelector(".remove-img-btn").addEventListener("click", () => {
+                        currentImageB64 = null;
+                        imgPreview.classList.add("hidden");
+                        imgPreview.innerHTML = "";
+                        imgInput.value = "";
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Chat / Ask Flow
+            askBtn.addEventListener("click", async () => {
+                const text = askText.value.trim();
+                if (!text && !currentImageB64) return;
+
+                askBtn.disabled = true;
+                askBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+                
+                try {
+                    const res = await fetch("/api/ai/chat", {
+                        method: "POST",
+                        headers: { 
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${localStorage.getItem("token")}`
+                        },
+                        body: JSON.stringify({ 
+                            prompt: text || "Analyze this image", 
+                            image: currentImageB64 
+                        })
+                    });
+                    const data = await res.json();
+                    resultContent.textContent = data.response;
+                    resultPanel.classList.remove("hidden");
+                    
+                    // Clear inputs
+                    askText.value = "";
+                    askText.style.height = "auto";
+                    currentImageB64 = null;
+                    imgPreview.classList.add("hidden");
+                    imgPreview.innerHTML = "";
+                } catch (e) {
+                    alert("Chat failed: " + e.message);
+                } finally {
+                    askBtn.disabled = false;
+                    askBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
+                }
+            });
+
+            document.getElementById("btn-close-ask-result").addEventListener("click", () => {
+                resultPanel.classList.add("hidden");
+            });
+
+            // Ask Agent Shortcut
+            document.getElementById("ask-agent-btn").addEventListener("click", () => {
+                askText.value = "Hey Agent, can you ";
+                askText.focus();
             });
 
         } catch (e) {
@@ -252,6 +383,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         <h4 style="margin-bottom:4px;">${pr.title}</h4>
                         <div class="list-meta">#${pr.id} opened by ${pr.author} • branch: ${pr.branch_name}</div>
                         ${pr.state === "open" ? `<div class="pr-preview-box glass-panel" style="margin-top:12px; padding:12px; font-size:13px; border:1px solid rgba(255,255,255,0.05); background:rgba(0,0,0,0.2);">
+                            <div style="color:var(--accent-color); margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px; font-weight:600;">What changed & Where</div>
+                            <div style="margin-bottom:12px; line-height:1.4;">${pr.description || "Analyzing changes..."}</div>
+                            
                             <div style="color:var(--text-muted); margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">AI Code Review</div>
                             <div style="font-style:italic; margin-bottom:12px;">"${pr.ai_review || "No review available."}"</div>
                             <div style="color:var(--text-muted); margin-bottom:4px;">Target File: <code style="color:var(--accent-color);">${pr.target_path}</code></div>
