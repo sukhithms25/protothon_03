@@ -1,0 +1,95 @@
+from sqlalchemy.orm import Session
+import models
+
+def get_repo(db: Session, repo_id: int):
+    return db.query(models.Repository).filter(models.Repository.id == repo_id).first()
+
+def get_user_repos(db: Session, user_id: int):
+    return db.query(models.Repository).filter(models.Repository.owner_id == user_id).all()
+
+def get_all_repos(db: Session):
+    return db.query(models.Repository).all()
+
+def create_repo(db: Session, name: str, description: str, owner_id: int):
+    db_repo = models.Repository(name=name, description=description, owner_id=owner_id)
+    db.add(db_repo)
+    db.commit()
+    db.refresh(db_repo)
+
+    # Automatically seed the repository with some initial dummy files so the AI has something to read
+    seed_files = [
+        models.File(repo_id=db_repo.id, path="README.md", content=f"# {name}\n\n{description}\n\nThis is a mock repository."),
+        models.File(repo_id=db_repo.id, path="main.py", content='def hello_world():\n    print("Hello from AI clone!")\n\nif __name__ == "__main__":\n    hello_world()'),
+        models.File(repo_id=db_repo.id, path="utils.py", content='def add(a, b):\n    return a + b\n')
+    ]
+    db.add_all(seed_files)
+    db.commit()
+    return db_repo
+
+def get_repo_files(db: Session, repo_id: int):
+    return db.query(models.File).filter(models.File.repo_id == repo_id).all()
+
+def get_file_content(db: Session, repo_id: int, file_path: str):
+    file = db.query(models.File).filter(models.File.repo_id == repo_id, models.File.path == file_path).first()
+    return file.content if file else None
+
+def update_file_content(db: Session, repo_id: int, file_path: str, new_content: str):
+    file = db.query(models.File).filter(models.File.repo_id == repo_id, models.File.path == file_path).first()
+    if file:
+        file.content = new_content
+        db.commit()
+
+def get_repo_issues(db: Session, repo_id: int):
+    return db.query(models.Issue).filter(models.Issue.repo_id == repo_id).all()
+
+def create_issue(db: Session, repo_id: int, title: str, body: str, author_id: int):
+    db_issue = models.Issue(repo_id=repo_id, title=title, body=body, author_id=author_id)
+    db.add(db_issue)
+    db.commit()
+    db.refresh(db_issue)
+    return db_issue
+
+def get_repo_prs(db: Session, repo_id: int):
+    return db.query(models.PullRequest).filter(models.PullRequest.repo_id == repo_id).all()
+
+def create_pull_request(db: Session, repo_id, title, body, author_id, branch_name="main", issue_id=None, target_path=None, original_code=None, proposed_code=None, ai_review=None, description=None):
+    new_pr = models.PullRequest(
+        repo_id=repo_id,
+        issue_id=issue_id,
+        title=title,
+        body=body,
+        author_id=author_id,
+        branch_name=branch_name,
+        target_path=target_path,
+        original_code=original_code,
+        proposed_code=proposed_code,
+        ai_review=ai_review,
+        description=description
+    )
+    db.add(new_pr)
+    db.commit()
+    db.refresh(new_pr)
+    return new_pr
+
+def merge_pr(db: Session, pr_id: int):
+    pr = db.query(models.PullRequest).filter(models.PullRequest.id == pr_id).first()
+    if not pr or pr.state != "open":
+        return None
+    
+    # 1. Update the actual file
+    file = db.query(models.File).filter(models.File.repo_id == pr.repo_id, models.File.path == pr.target_path).first()
+    if file:
+        file.content = pr.proposed_code
+    
+    # 2. Update PR state
+    pr.state = "merged"
+    
+    # 3. Close the linked issue if exists
+    if pr.issue_id:
+        issue = db.query(models.Issue).filter(models.Issue.id == pr.issue_id).first()
+        if issue:
+            issue.status = "closed"
+            
+    db.commit()
+    db.refresh(pr)
+    return pr

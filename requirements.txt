@@ -1,3 +1,13 @@
+fastapi
+uvicorn[standard]
+PyGithub
+google-genai
+python-dotenv
+pydantic
+bcrypt
+sqlalchemy
+python-jose[cryptography]
+python-multipart
 langchain
 langchain-community
 ollama
